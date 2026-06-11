@@ -341,7 +341,14 @@ function buildCard(p) {
     <div class="peticio-detail" id="detail-${p.id}">
       <div class="detail-grid">
         <div>
-          <div class="detail-section-title">Material rebut (${mat.length} tipus)</div>
+          <div class="detail-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Material rebut (${mat.length} tipus)</span>
+            <span style="font-size:12px;color:var(--gray-600);font-weight:600;">
+              Total rebut: <span id="total-rebut-${p.id}" style="font-family:var(--mono);color:var(--teal);font-size:14px;">${mat.reduce((s,m)=>s+(m.rebut||0),0)}</span>
+              &nbsp;/&nbsp;
+              <span style="font-family:var(--mono);color:var(--gray-400);font-size:14px;">${mat.reduce((s,m)=>s+m.quantitat,0)}</span> enviades
+            </span>
+          </div>
           <div class="material-list">${materialHTML}</div>
           ${bolsesHTML}
           ${p.observacions ? `<div style="margin-top:12px;padding:10px 14px;background:var(--amber-light);border-radius:8px;font-size:13px;color:var(--amber);"><strong>Obs:</strong> ${p.observacions}</div>` : ''}
@@ -384,13 +391,14 @@ function toggleCard(id) {
 }
 
 async function savePeticio(id) {
-  const vapor  = parseInt(document.getElementById(`vapor-${id}`).value)||0;
-  const plasma = parseInt(document.getElementById(`plasma-${id}`).value)||0;
-  const obs    = document.getElementById(`obs-${id}`).value;
+  const vapor  = parseInt(document.getElementById(`vapor-${id}`)?.value)||0;
+  const plasma = parseInt(document.getElementById(`plasma-${id}`)?.value)||0;
+  const obs    = document.getElementById(`obs-${id}`)?.value || '';
   await sbPatch('peticions', id, { vapor, plasma, observacions: obs });
   const p = peticions.find(x => x.id === id);
   if (p) { p.vapor = vapor; p.plasma = plasma; p.observacions = obs; }
   showToast(`✓ Petició ${p?.codi} desada`);
+  // NO cridem loadAll per no tancar el card
 }
 
 function tryAdvance(id, nextEstat) {
@@ -413,7 +421,7 @@ async function advanceEstat(id, nextEstat) {
   await savePeticio(id);
   await sbPatch('peticions', id, { estat: nextEstat });
   showToast(`${ESTAT_CONFIG[nextEstat].icon} → ${ESTAT_CONFIG[nextEstat].label}`);
-  await loadAll();
+  await loadAll(); // Aquí sí recarreguem perquè canvia d'estat
 }
 
 function renderAutoclave() {
