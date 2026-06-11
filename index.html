@@ -349,8 +349,9 @@ function buildCard(p) {
             </div>
             <div class="action-row">
               <button class="btn btn-teal" onclick="savePeticio('${p.id}')">💾 Desar</button>
-              ${nextLabel ? `<button class="btn btn-green" id="btn-next-${p.id}" onclick="advanceEstat('${p.id}','${nextEstat}')">→ ${nextLabel}</button>` : ''}
+              ${nextLabel ? `<button class="btn btn-green" id="btn-next-${p.id}" onclick="tryAdvance('${p.id}','${nextEstat}')">→ ${nextLabel}</button>` : ''}
             </div>
+            ${nextEstat === 'autoclave' ? `<div id="warn-bolses-${p.id}" style="display:none;margin-top:8px;padding:8px 12px;background:var(--amber-light);color:var(--amber);border-radius:8px;font-size:12px;font-weight:600;">⚠️ Indica almenys 1 bossa (vapor o plasma) abans de passar a autoclau.</div>` : ''}
           </div>
         </div>
       </div>
@@ -371,6 +372,20 @@ async function savePeticio(id) {
   const p = peticions.find(x => x.id === id);
   if (p) { p.vapor = vapor; p.plasma = plasma; p.observacions = obs; }
   showToast(`✓ Petició ${p?.codi} desada`);
+}
+
+function tryAdvance(id, nextEstat) {
+  if (nextEstat === 'autoclave') {
+    const vapor  = parseInt(document.getElementById(`vapor-${id}`)?.value)||0;
+    const plasma = parseInt(document.getElementById(`plasma-${id}`)?.value)||0;
+    const warn   = document.getElementById(`warn-bolses-${id}`);
+    if (vapor + plasma === 0) {
+      if (warn) warn.style.display = 'block';
+      return;
+    }
+    if (warn) warn.style.display = 'none';
+  }
+  advanceEstat(id, nextEstat);
 }
 
 async function advanceEstat(id, nextEstat) {
