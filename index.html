@@ -65,8 +65,15 @@
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
   .detail-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--gray-400); margin-bottom:12px; }
   .material-list { display:flex; flex-direction:column; gap:6px; }
-  .material-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--white); border:1px solid var(--gray-200); border-radius:8px; font-size:13px; }
-  .material-qty { font-family:var(--mono); font-weight:700; font-size:14px; color:var(--teal); background:var(--teal-light); padding:3px 10px; border-radius:6px; }
+  .material-item { display:flex; justify-content:space-between; align-items:center; padding:7px 12px; background:var(--white); border:1px solid var(--gray-200); border-radius:8px; font-size:13px; gap:8px; }
+  .material-qty { font-family:var(--mono); font-weight:700; font-size:13px; color:var(--teal); background:var(--teal-light); padding:3px 8px; border-radius:6px; white-space:nowrap; }
+  .material-rebut-wrap { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .rebut-label { font-size:11px; color:var(--gray-400); font-weight:600; }
+  .rebut-input { width:52px; text-align:center; font-family:var(--mono); font-weight:700; font-size:13px; padding:4px 4px; border:1.5px solid var(--gray-200); border-radius:6px; }
+  .rebut-input:focus { outline:none; border-color:var(--teal); }
+  .rebut-input.menys { border-color:var(--red); background:var(--red-light); color:var(--red); }
+  .rebut-input.igual { border-color:var(--green); background:var(--green-light); color:var(--green); }
+  .qty-divider { color:var(--gray-200); font-size:16px; }
   .empaq-form { display:flex; flex-direction:column; gap:16px; }
   .bolses-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .bolsa-field { background:var(--white); border:1.5px solid var(--gray-200); border-radius:10px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
@@ -296,11 +303,23 @@ function buildCard(p) {
   const mat = materialCache[p.id] || [];
   const dataFmt = new Date(p.created_at).toLocaleString('ca-ES');
 
-  const materialHTML = mat.map(m => `
-    <div class="material-item">
-      <span>${m.material_nom}</span>
-      <span class="material-qty">${m.quantitat}</span>
-    </div>`).join('') || '<div style="color:var(--gray-400);font-size:13px;">Sense material registrat</div>';
+  const materialHTML = mat.map(m => {
+    const rebut = m.rebut !== null && m.rebut !== undefined ? m.rebut : '';
+    const cls = rebut === '' ? '' : parseInt(rebut) < m.quantitat ? 'menys' : 'igual';
+    return `<div class="material-item">
+      <span style="flex:1">${m.material_nom}</span>
+      <div class="material-rebut-wrap">
+        <span class="rebut-label">Rebut</span>
+        <input type="number" class="rebut-input ${cls}" min="0" max="999"
+          value="${rebut}" placeholder="—"
+          data-mat-id="${m.id}" data-enviat="${m.quantitat}"
+          onchange="updateRebut(this)"
+          oninput="colorRebut(this)">
+        <span class="qty-divider">/</span>
+        <span class="material-qty">${m.quantitat}</span>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--gray-400);font-size:13px;">Sense material registrat</div>';
 
   const bolsesHTML = (p.plasma > 0 || p.vapor > 0) ? `
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
