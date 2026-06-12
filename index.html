@@ -144,7 +144,7 @@
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('empaquetado')">
-    📦 Empaquetament <span class="badge-count" id="badge-empaq">0</span>
+    📦 Rebut i empaquetat <span class="badge-count" id="badge-empaq">0</span>
   </div>
   <div class="tab" onclick="switchTab('autoclave')">🔬 Autoclau</div>
   <div class="tab" onclick="switchTab('sortides')">
@@ -179,9 +179,7 @@
 
     <div class="filters">
       <button class="filter-btn active" onclick="setFilter(this,'tots')">Totes</button>
-      <button class="filter-btn" onclick="setFilter(this,'enviada')">Enviades</button>
       <button class="filter-btn" onclick="setFilter(this,'rebuda')">Rebudes</button>
-      <button class="filter-btn" onclick="setFilter(this,'empaquetant')">Empaquetant</button>
       <button class="filter-btn" onclick="setFilter(this,'autoclave')">Autoclau</button>
       <button class="filter-btn" onclick="setFilter(this,'llesta')">Llestes</button>
       <input type="text" class="filter-search" placeholder="🔍 Cerca per codi, servei..." oninput="renderPeticions()" id="search-filter">
@@ -487,7 +485,7 @@ function buildCard(p) {
             </div>
             <div class="action-row">
               <button class="btn btn-teal" onclick="savePeticio('${p.id}')">💾 Desar</button>
-              ${nextLabel ? `<button class="btn btn-green" id="btn-next-${p.id}" onclick="tryAdvance('${p.id}','${nextEstat}')">→ ${nextLabel}</button>` : ''}
+              ${nextLabel ? `<button class="btn btn-green" id="btn-next-${p.id}" onclick="tryAdvance('${p.id}','${nextEstat}')">→ Rebut i empaquetat</button>` : ''}
             </div>
             ${nextEstat === 'autoclave' ? `<div id="warn-bolses-${p.id}" style="display:none;margin-top:8px;padding:8px 12px;background:var(--amber-light);color:var(--amber);border-radius:8px;font-size:12px;font-weight:600;line-height:1.8;"></div>` : ''}
           </div>
@@ -514,39 +512,22 @@ async function savePeticio(id) {
 }
 
 function tryAdvance(id, nextEstat) {
-  // Validació obligatòria abans de marcar com a "Rebut i empaquetat"
   if (nextEstat === 'empaquetat') {
-    const errors = [];
-    const warn = document.getElementById(`warn-bolses-${id}`);
-
-    // 1. Comprovar vapor + plasma > 0
+    const warn  = document.getElementById(`warn-bolses-${id}`);
     const vapor  = parseInt(document.getElementById(`vapor-${id}`)?.value)||0;
     const plasma = parseInt(document.getElementById(`plasma-${id}`)?.value)||0;
-    if (vapor + plasma === 0) errors.push('⚠️ Indica almenys 1 bossa (vapor o plasma).');
 
-    // 2. Comprovar que tots els ítems tenen "rebut" omplert
-    const rebutInputs = document.querySelectorAll(`#detail-${id} .rebut-input`);
-    let rebutBuits = 0;
-    rebutInputs.forEach(i => { if (i.value === '') rebutBuits++; });
-    if (rebutBuits > 0) errors.push(`⚠️ Indica les unitats rebudes dels ${rebutBuits} article(s) sense confirmar.`);
-
-    if (errors.length > 0) {
-      if (warn) { warn.innerHTML = errors.join('<br>'); warn.style.display = 'block'; }
+    if (vapor + plasma === 0) {
+      if (warn) { warn.innerHTML = '⚠️ Indica almenys 1 bossa (vapor o plasma) abans de continuar.'; warn.style.display = 'block'; }
       return;
     }
     if (warn) warn.style.display = 'none';
 
-    // Tot correcte: empaquetat → autoclave automàticament
-    advanceEstat(id, 'empaquetat').then(() => {
-      // Passar a autoclau automàticament
-      setTimeout(async () => {
-        const p = peticions.find(x => x.id === id);
-        if (p && p.estat === 'empaquetat') {
-          await sbPatch('peticions', id, { estat: 'autoclave' });
-          showToast('🔬 Passat a autoclau automàticament');
-          await loadAll();
-        }
-      }, 800);
+    // Empaquetat → Autoclau automàticament
+    savePeticio(id).then(async () => {
+      await sbPatch('peticions', id, { estat: 'autoclave' });
+      showToast('🔬 Rebut i empaquetat → Autoclau');
+      await loadAll();
     });
     return;
   }
