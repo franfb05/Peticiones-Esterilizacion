@@ -504,11 +504,32 @@ async function savePeticio(id) {
   const vapor  = parseInt(document.getElementById(`vapor-${id}`)?.value)||0;
   const plasma = parseInt(document.getElementById(`plasma-${id}`)?.value)||0;
   const obs    = document.getElementById(`obs-${id}`)?.value || '';
+
+  // Guardar petició principal
   await sbPatch('peticions', id, { vapor, plasma, observacions: obs });
   const p = peticions.find(x => x.id === id);
   if (p) { p.vapor = vapor; p.plasma = plasma; p.observacions = obs; }
+
+  // Guardar camps "rebut" de cada ítem
+  const rebutInputs = document.querySelectorAll(`#detail-${id} .rebut-input`);
+  const rebutPromises = [];
+  rebutInputs.forEach(input => {
+    const matId = input.dataset.matId;
+    const val   = input.value === '' ? null : parseInt(input.value);
+    rebutPromises.push(
+      fetch(`${SUPABASE_URL}/rest/v1/peticio_material?id=eq.${matId}`, {
+        method: 'PATCH',
+        headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ rebut: val })
+      })
+    );
+    // Actualitzar cache local
+    const mat = materialCache[id]?.find(m => m.id === matId);
+    if (mat) mat.rebut = val;
+  });
+  await Promise.all(rebutPromises);
+
   showToast(`✓ Petició ${p?.codi} desada`);
-  // NO cridem loadAll per no tancar el card
 }
 
 function tryAdvance(id, nextEstat) {
