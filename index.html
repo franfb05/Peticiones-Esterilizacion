@@ -104,6 +104,18 @@
   .empty-state p { font-size:15px; margin-bottom:6px; }
   .loading { text-align:center; padding:40px; color:var(--gray-400); }
 
+
+  /* VERIFICACIÓ */
+  .modal-verif { background:var(--white); border-radius:16px; padding:32px; max-width:360px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2); text-align:center; }
+  .modal-verif h2 { font-size:18px; font-weight:700; color:var(--teal-dark); margin-bottom:8px; }
+  .modal-verif p { font-size:13px; color:var(--gray-600); margin-bottom:20px; line-height:1.5; }
+  .verif-codi-info { font-family:var(--mono); font-size:20px; font-weight:700; color:var(--teal-dark); background:var(--teal-xlight); padding:8px 16px; border-radius:8px; margin-bottom:20px; display:inline-block; }
+  .verif-input-wrap { display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
+  .verif-input { font-family:var(--mono); font-size:28px; font-weight:700; letter-spacing:0.2em; text-align:center; width:140px; padding:12px; border:2px solid var(--gray-200); border-radius:10px; text-transform:uppercase; }
+  .verif-input:focus { outline:none; border-color:var(--teal); }
+  .verif-input.error { border-color:var(--red); background:var(--red-light); color:var(--red); }
+  .verif-error { color:var(--red); font-size:13px; font-weight:600; margin-bottom:12px; display:none; }
+  .verif-actions { display:flex; gap:10px; justify-content:center; }
   /* ZEBRA PRINT */
   .modal-zebra { background:var(--white); border-radius:16px; padding:32px; max-width:400px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
   .modal-zebra h2 { font-size:18px; font-weight:700; color:var(--teal-dark); margin-bottom:16px; }
@@ -158,24 +170,7 @@
     <div class="section-title">Empaquetament</div>
     <div class="section-sub">Peticions rebudes pendents de processar.</div>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon" style="background:#FEF3C7;">📤</div>
-        <div><div class="stat-label">Enviades</div><div class="stat-value" id="stat-enviades">—</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background:#EDE9FE;">📦</div>
-        <div><div class="stat-label">Empaquetant</div><div class="stat-value" id="stat-empaq">—</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background:#CCFBF1;">🔬</div>
-        <div><div class="stat-label">En autoclau</div><div class="stat-value" id="stat-auto">—</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background:#D1FAE5;">✅</div>
-        <div><div class="stat-label">Llestes</div><div class="stat-value" id="stat-llestes">—</div></div>
-      </div>
-    </div>
+
 
     <div class="filters">
       <button class="filter-btn active" onclick="setFilter(this,'tots')">Totes</button>
@@ -204,6 +199,28 @@
   </div>
 </main>
 
+
+
+<!-- MODAL VERIFICACIÓ -->
+<div class="modal-overlay" id="modal-verif" style="display:none;">
+  <div class="modal-verif">
+    <div style="font-size:36px;margin-bottom:12px;">🔐</div>
+    <h2>Verificació requerida</h2>
+    <p>Introdueix el codi de verificació imprès al tiquet de la planta per accedir a aquesta petició.</p>
+    <div class="verif-codi-info" id="verif-codi-display">——</div>
+    <div class="verif-input-wrap">
+      <input type="text" class="verif-input" id="verif-input"
+        maxlength="4" placeholder="···K"
+        oninput="this.value=this.value.toUpperCase()"
+        onkeydown="if(event.key==='Enter')comprovarVerif()">
+    </div>
+    <div class="verif-error" id="verif-error">❌ Codi incorrecte. Comprova el tiquet.</div>
+    <div class="verif-actions">
+      <button class="btn btn-outline" onclick="closeVerif()">Cancel·lar</button>
+      <button class="btn btn-teal" onclick="comprovarVerif()">✓ Verificar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL ZEBRA -->
 <div class="modal-overlay" id="modal-zebra" style="display:none;">
@@ -495,9 +512,60 @@ function buildCard(p) {
   </div>`;
 }
 
+const verificades = new Set(); // IDs de peticions ja verificades aquesta sessió
+
 function toggleCard(id) {
-  document.getElementById(`detail-${id}`).classList.toggle('open');
+  const detail = document.getElementById(`detail-${id}`);
+  const isOpen = detail.classList.contains('open');
+
+  if (!isOpen && !verificades.has(id)) {
+    // Demanar verificació abans d'obrir
+    const p = peticions.find(x => x.id === id);
+    if (p && p.cod_verificacio) {
+      obrirVerif(id, p.codi, p.cod_verificacio);
+      return;
+    }
+  }
+  detail.classList.toggle('open');
   document.getElementById(`arrow-${id}`).classList.toggle('open');
+}
+
+function obrirVerif(id, codi, codCorrecte) {
+  const modal = document.getElementById('modal-verif');
+  modal.style.display = 'flex';
+  modal.dataset.id    = id;
+  modal.dataset.cod   = codCorrecte;
+  document.getElementById('verif-codi-display').textContent = codi;
+  document.getElementById('verif-input').value = '';
+  document.getElementById('verif-input').classList.remove('error');
+  document.getElementById('verif-error').style.display = 'none';
+  setTimeout(() => document.getElementById('verif-input').focus(), 100);
+}
+
+function closeVerif() {
+  document.getElementById('modal-verif').style.display = 'none';
+}
+
+function comprovarVerif() {
+  const modal  = document.getElementById('modal-verif');
+  const id     = modal.dataset.id;
+  const correcte = modal.dataset.cod;
+  const introduit = document.getElementById('verif-input').value.trim().toUpperCase();
+  const errEl  = document.getElementById('verif-error');
+  const input  = document.getElementById('verif-input');
+
+  if (introduit === correcte) {
+    verificades.add(id);
+    closeVerif();
+    // Obrir el card
+    document.getElementById(`detail-${id}`).classList.add('open');
+    document.getElementById(`arrow-${id}`).classList.add('open');
+  } else {
+    input.classList.add('error');
+    errEl.style.display = 'block';
+    input.value = '';
+    setTimeout(() => { input.classList.remove('error'); }, 1200);
+  }
 }
 
 async function savePeticio(id) {
