@@ -103,6 +103,26 @@
   .empty-state .icon { font-size:48px; margin-bottom:12px; }
   .empty-state p { font-size:15px; margin-bottom:6px; }
   .loading { text-align:center; padding:40px; color:var(--gray-400); }
+
+  /* ZEBRA PRINT */
+  .modal-zebra { background:var(--white); border-radius:16px; padding:32px; max-width:400px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+  .modal-zebra h2 { font-size:18px; font-weight:700; color:var(--teal-dark); margin-bottom:16px; }
+  .zebra-preview {
+    width:240px; margin:0 auto 16px;
+    background:#fff; border:1.5px solid #ccc;
+    font-family:'JetBrains Mono',monospace;
+    padding:12px 14px; font-size:10px; color:#000;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  }
+  .zeb-hospital { font-size:9px; font-weight:700; letter-spacing:0.05em; text-align:center; margin-bottom:4px; }
+  .zeb-divider  { border:none; border-top:1px dashed #999; margin:6px 0; }
+  .zeb-codi     { font-size:30px; font-weight:700; letter-spacing:0.15em; text-align:center; margin:6px 0; }
+  .zeb-row      { display:flex; justify-content:space-between; gap:6px; margin:2px 0; font-size:9px; }
+  .zeb-label    { font-weight:700; color:#555; white-space:nowrap; }
+  .zeb-val      { text-align:right; font-weight:600; word-break:break-word; }
+  .zeb-footer   { text-align:center; font-size:8px; color:#888; margin-top:6px; }
+  .zebra-note   { font-size:12px; color:var(--gray-600); background:var(--gray-50); border-radius:8px; padding:10px 14px; margin-bottom:16px; line-height:1.5; }
+  .modal-zebra-actions { display:flex; gap:10px; justify-content:flex-end; }
   .toast { position:fixed; bottom:24px; right:24px; background:var(--teal-dark); color:var(--white); padding:14px 20px; border-radius:10px; font-size:14px; font-weight:500; z-index:999; opacity:0; transform:translateY(10px); transition:all 0.3s; pointer-events:none; }
   .toast.show { opacity:1; transform:translateY(0); }
   .refresh-btn { margin-left:auto; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:1.5px solid var(--gray-200); background:var(--white); color:var(--gray-600); }
@@ -186,6 +206,34 @@
   </div>
 </main>
 
+
+<!-- MODAL ZEBRA -->
+<div class="modal-overlay" id="modal-zebra">
+  <div class="modal-zebra">
+    <h2>🖨️ Imprimir etiqueta Zebra</h2>
+    <div class="zebra-note">
+      Etiqueta apta per autoclau per identificar el conjunt de bosses d'aquesta petició.
+    </div>
+    <div class="zebra-preview" id="zebra-preview">
+      <div class="zeb-hospital">VALL D'HEBRON · ESTERILITZACIÓ</div>
+      <hr class="zeb-divider">
+      <div class="zeb-codi" id="zeb-codi">——</div>
+      <hr class="zeb-divider">
+      <div class="zeb-row"><span class="zeb-label">CENTRE</span><span class="zeb-val" id="zeb-centre">—</span></div>
+      <div class="zeb-row"><span class="zeb-label">SERVEI</span><span class="zeb-val" id="zeb-servei">—</span></div>
+      <div class="zeb-row"><span class="zeb-label">DATA</span><span class="zeb-val" id="zeb-data">—</span></div>
+      <div class="zeb-row"><span class="zeb-label">HORA</span><span class="zeb-val" id="zeb-hora">—</span></div>
+      <div class="zeb-row"><span class="zeb-label">USUARI</span><span class="zeb-val" id="zeb-usuari">—</span></div>
+      <hr class="zeb-divider">
+      <div class="zeb-footer">Conservar fins a lliurament</div>
+    </div>
+    <div class="modal-zebra-actions">
+      <button class="btn btn-outline" onclick="closeZebra()">Cancel·lar</button>
+      <button class="btn btn-teal" onclick="enviarZebra()">🖨️ Imprimir</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -213,14 +261,14 @@ async function sbPatch(table, id, body) {
 }
 
 const ESTAT_CONFIG = {
-  enviada:     { label:"Enviada",           cls:"badge-enviada",     icon:"📤" },
-  rebuda:      { label:"Rebuda",            cls:"badge-rebuda",      icon:"📥" },
-  empaquetant: { label:"Empaquetant",       cls:"badge-empaquetant", icon:"📦" },
-  autoclave:   { label:"En autoclau",       cls:"badge-autoclave",   icon:"🔬" },
-  llesta:      { label:"Llesta per sortir", cls:"badge-llesta",      icon:"✅" },
-  entregada:   { label:"Entregada",         cls:"badge-entregada",   icon:"🏥" },
+  enviada:    { label:"Enviada",              cls:"badge-enviada",     icon:"📤" },
+  rebuda:     { label:"Rebuda",               cls:"badge-rebuda",      icon:"📥" },
+  empaquetat: { label:"Rebut i empaquetat",   cls:"badge-empaquetant", icon:"📦" },
+  autoclave:  { label:"En autoclau",          cls:"badge-autoclave",   icon:"🔬" },
+  llesta:     { label:"Llesta per sortir",    cls:"badge-llesta",      icon:"✅" },
+  entregada:  { label:"Entregada",            cls:"badge-entregada",   icon:"🏥" },
 };
-const FLUX = ["enviada","rebuda","empaquetant","autoclave","llesta","entregada"];
+const FLUX = ["enviada","rebuda","empaquetat","autoclave","llesta","entregada"];
 
 let peticions = [];
 let materialCache = {};
@@ -234,6 +282,65 @@ function renderDate() {
     now.toLocaleDateString('ca-ES',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) +
     '  ' + now.toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'});
   setTimeout(renderDate, 30000);
+}
+
+
+// ── ZEBRA ─────────────────────────────────────────
+function obrirZebra(peticioId) {
+  const p = peticions.find(x => x.id === peticioId);
+  if (!p) return;
+  const ara   = new Date(p.created_at);
+  const data  = ara.toLocaleDateString('ca-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const hora  = ara.toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('zeb-codi').textContent    = p.codi;
+  document.getElementById('zeb-centre').textContent  = p.centre_nom;
+  document.getElementById('zeb-servei').textContent  = p.planta_nom;
+  document.getElementById('zeb-data').textContent    = data;
+  document.getElementById('zeb-hora').textContent    = hora;
+  document.getElementById('zeb-usuari').textContent  = p.solicitant;
+  document.getElementById('modal-zebra').classList.add('show');
+  document.getElementById('modal-zebra')._peticioId  = peticioId;
+}
+
+function closeZebra() {
+  document.getElementById('modal-zebra').classList.remove('show');
+}
+
+function enviarZebra() {
+  const p = peticions.find(x => x.id === document.getElementById('modal-zebra')._peticioId);
+  if (!p) return;
+
+  // Generar ZPL per impressora Zebra
+  const ara  = new Date(p.created_at);
+  const data = ara.toLocaleDateString('ca-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const hora = ara.toLocaleTimeString('ca-ES',{hour:'2-digit',minute:'2-digit'});
+
+  const zpl = `^XA
+^CI28
+^FO20,20^A0N,22,22^FDVALL D'HEBRON - ESTERILITZACIO^FS
+^FO20,48^GB410,3,3^FS
+^FO20,60^A0N,60,60^FD${p.codi}^FS
+^FO20,128^GB410,3,3^FS
+^FO20,140^A0N,20,20^FDCENTRE:^FS^FO120,140^A0N,20,20^FD${p.centre_nom}^FS
+^FO20,165^A0N,20,20^FDSERVEI:^FS^FO120,165^A0N,20,20^FD${p.planta_nom}^FS
+^FO20,190^A0N,20,20^FDDATA:^FS^FO120,190^A0N,20,20^FD${data} ${hora}^FS
+^FO20,215^A0N,20,20^FDUSUARI:^FS^FO120,215^A0N,20,20^FD${p.solicitant}^FS
+^FO20,245^GB410,3,3^FS
+^FO20,255^A0N,18,18^FDConservar fins a lliurament^FS
+^XZ`;
+
+  // Intentar imprimir directament a Zebra via BrowserPrint (si disponible)
+  // Si no, descarregar com a fitxer .zpl
+  const blob = new Blob([zpl], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `etiqueta_${p.codi}.zpl`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast(`🖨️ Fitxer ZPL generat per ${p.codi}`);
+  closeZebra();
 }
 
 async function loadAll() {
@@ -336,6 +443,7 @@ function buildCard(p) {
         <div class="peticio-meta">${dataFmt} · ${p.solicitant} · Ext. ${p.extensio} · CFH ${p.cfh}</div>
       </div>
       <span class="status-badge ${ec.cls}">${ec.icon} ${ec.label}</span>
+      ${p.estat === 'rebuda' || p.estat === 'enviada' ? `<button class="btn btn-outline" style="padding:5px 10px;font-size:11px;flex-shrink:0;" onclick="event.stopPropagation();obrirZebra('${p.id}')">🖨️ Etiqueta</button>` : ''}
       <div class="expand-btn" id="arrow-${p.id}">▼</div>
     </div>
     <div class="peticio-detail" id="detail-${p.id}">
@@ -377,7 +485,7 @@ function buildCard(p) {
               <button class="btn btn-teal" onclick="savePeticio('${p.id}')">💾 Desar</button>
               ${nextLabel ? `<button class="btn btn-green" id="btn-next-${p.id}" onclick="tryAdvance('${p.id}','${nextEstat}')">→ ${nextLabel}</button>` : ''}
             </div>
-            ${nextEstat === 'autoclave' ? `<div id="warn-bolses-${p.id}" style="display:none;margin-top:8px;padding:8px 12px;background:var(--amber-light);color:var(--amber);border-radius:8px;font-size:12px;font-weight:600;">⚠️ Indica almenys 1 bossa (vapor o plasma) abans de passar a autoclau.</div>` : ''}
+            ${nextEstat === 'autoclave' ? `<div id="warn-bolses-${p.id}" style="display:none;margin-top:8px;padding:8px 12px;background:var(--amber-light);color:var(--amber);border-radius:8px;font-size:12px;font-weight:600;line-height:1.8;"></div>` : ''}
           </div>
         </div>
       </div>
@@ -402,15 +510,41 @@ async function savePeticio(id) {
 }
 
 function tryAdvance(id, nextEstat) {
-  if (nextEstat === 'autoclave') {
+  // Validació obligatòria abans de marcar com a "Rebut i empaquetat"
+  if (nextEstat === 'empaquetat') {
+    const errors = [];
+    const warn = document.getElementById(`warn-bolses-${id}`);
+
+    // 1. Comprovar vapor + plasma > 0
     const vapor  = parseInt(document.getElementById(`vapor-${id}`)?.value)||0;
     const plasma = parseInt(document.getElementById(`plasma-${id}`)?.value)||0;
-    const warn   = document.getElementById(`warn-bolses-${id}`);
-    if (vapor + plasma === 0) {
-      if (warn) warn.style.display = 'block';
+    if (vapor + plasma === 0) errors.push('⚠️ Indica almenys 1 bossa (vapor o plasma).');
+
+    // 2. Comprovar que tots els ítems tenen "rebut" omplert
+    const rebutInputs = document.querySelectorAll(`#detail-${id} .rebut-input`);
+    let rebutBuits = 0;
+    rebutInputs.forEach(i => { if (i.value === '') rebutBuits++; });
+    if (rebutBuits > 0) errors.push(`⚠️ Indica les unitats rebudes dels ${rebutBuits} article(s) sense confirmar.`);
+
+    if (errors.length > 0) {
+      if (warn) { warn.innerHTML = errors.join('<br>'); warn.style.display = 'block'; }
       return;
     }
     if (warn) warn.style.display = 'none';
+
+    // Tot correcte: empaquetat → autoclave automàticament
+    advanceEstat(id, 'empaquetat').then(() => {
+      // Passar a autoclau automàticament
+      setTimeout(async () => {
+        const p = peticions.find(x => x.id === id);
+        if (p && p.estat === 'empaquetat') {
+          await sbPatch('peticions', id, { estat: 'autoclave' });
+          showToast('🔬 Passat a autoclau automàticament');
+          await loadAll();
+        }
+      }, 800);
+    });
+    return;
   }
   advanceEstat(id, nextEstat);
 }
