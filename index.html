@@ -208,7 +208,7 @@
 
 
 <!-- MODAL ZEBRA -->
-<div class="modal-overlay" id="modal-zebra">
+<div class="modal-overlay" id="modal-zebra" style="display:none;">
   <div class="modal-zebra">
     <h2>🖨️ Imprimir etiqueta Zebra</h2>
     <div class="zebra-note">
@@ -298,12 +298,16 @@ function obrirZebra(peticioId) {
   document.getElementById('zeb-data').textContent    = data;
   document.getElementById('zeb-hora').textContent    = hora;
   document.getElementById('zeb-usuari').textContent  = p.solicitant;
-  document.getElementById('modal-zebra').classList.add('show');
-  document.getElementById('modal-zebra')._peticioId  = peticioId;
+  const mz = document.getElementById('modal-zebra');
+  mz.style.display = 'flex';
+  mz.classList.add('show');
+  mz._peticioId = peticioId;
 }
 
 function closeZebra() {
-  document.getElementById('modal-zebra').classList.remove('show');
+  const m = document.getElementById('modal-zebra');
+  m.classList.remove('show');
+  m.style.display = 'none';
 }
 
 function enviarZebra() {
